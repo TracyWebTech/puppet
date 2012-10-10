@@ -9,7 +9,12 @@ Puppet::Type.type(:package).provide :pip,
 
   desc "Python packages via `pip`."
 
-  has_feature :installable, :uninstallable, :upgradeable, :versionable
+  has_feature :installable
+  has_feature :uninstallable
+  has_feature :upgradeable
+  has_feature :versionable
+  has_feature :install_options
+  has_feature :uninstall_options
 
   # Parse lines of output from `pip freeze`, which are structured as
   # _package_==_version_.
@@ -63,6 +68,7 @@ Puppet::Type.type(:package).provide :pip,
   # gives the fully-qualified URL to the repository.
   def install
     args = %w{install -q}
+    args << install_options
     if @resource[:source]
       args << "-e"
       if String === @resource[:ensure]
@@ -88,7 +94,7 @@ Puppet::Type.type(:package).provide :pip,
   # unless this issue gets fixed.
   # <http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=562544>
   def uninstall
-    lazy_pip "uninstall", "-y", "-q", @resource[:name]
+    lazy_pip "uninstall", "-y", "-q", uninstall_options, @resource[:name]
   end
 
   def update
@@ -107,5 +113,21 @@ Puppet::Type.type(:package).provide :pip,
     else
       raise e, 'Could not locate the pip command.'
     end
+  end
+
+  def install_options
+    join_options(resource[:install_options])
+  end
+
+  def uninstall_options
+    join_options(resource[:uninstall_options])
+  end
+
+  def join_options(options)
+    return unless options
+
+    options.collect do |prop,val|
+      "--#{prop}=#{val}"
+    end.join(' ')
   end
 end
